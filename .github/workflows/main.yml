@@ -29,8 +29,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK & Licenses
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_DIR" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
+          echo "sdk.dir=$SDK_DIR" > local.properties
+          mkdir -p "$SDK_DIR/licenses"
+          { echo ""; echo "24333f8a63b6825ea9c5514f83c2829b004d1fee"; } > "$SDK_DIR/licenses/android-sdk-license"
+          { echo ""; echo "84831b9409646a918e30573bab4c9c91346d8abd"; } > "$SDK_DIR/licenses/android-sdk-preview-license"
+          SDKMANAGER=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -n 1 || true)
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" --sdk_root="$SDK_DIR" "platforms;android-35" "build-tools;35.0.0" "platform-tools" || true
+          fi
 
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
@@ -38,7 +50,7 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK for Direct Download
         uses: actions/upload-artifact@v4
