@@ -1,0 +1,47 @@
+name: Build Meera Assistant APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Project ZIP if uploaded as single file
+        run: |
+          if [ -f "meera-assistant.zip" ]; then
+            echo "Found meera-assistant.zip, unzipping..."
+            unzip -o meera-assistant.zip
+          elif ls *.zip 1> /dev/null 2>&1; then
+            echo "Found zip file, unzipping..."
+            unzip -o *.zip
+          fi
+          chmod +x gradlew || true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK for Direct Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meera-Assistant-APK
+          path: '**/build/outputs/apk/debug/*.apk'
